@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Intelligent To-Do Manager</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+            background-color: #f4f6f8;
+        }
+
+        input {
+            padding: 8px;
+            width: 250px;
+        }
+
+        button {
+            padding: 8px;
+            margin-left: 5px;
+        }
+
+        li {
+            background: white;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .done {
+            text-decoration: line-through;
+            color: gray;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Intelligent To-Do Manager</h1>
+
+<input id="taskInput" placeholder="Enter task">
+<button onclick="addTask()">Add Task</button>
+
+<h2>Tasks</h2>
+<ul id="taskList"></ul>
+
+<h2>Daily Productivity</h2>
+<p id="summary"></p>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function fetchTasks() {
+    const res = await fetch(`${API}/tasks`);
+    const tasks = await res.json();
+
+    const list = document.getElementById("taskList");
+    list.innerHTML = "";
+
+    tasks.forEach(task => {
+        const li = document.createElement("li");
+
+        const title = document.createElement("span");
+        title.textContent = task.title;
+        if (task.completed) title.classList.add("done");
+
+        const actions = document.createElement("div");
+
+        if (!task.completed) {
+            const completeBtn = document.createElement("button");
+            completeBtn.textContent = "Complete";
+            completeBtn.onclick = () => completeTask(task.id);
+            actions.appendChild(completeBtn);
+        }
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.onclick = () => deleteTask(task.id);
+        actions.appendChild(deleteBtn);
+
+        li.appendChild(title);
+        li.appendChild(actions);
+        list.appendChild(li);
+    });
+
+    fetchProductivity();
+}
+
+async function fetchProductivity() {
+    const res = await fetch(`${API}/productivity/daily`);
+    const data = await res.json();
+
+    document.getElementById("summary").innerText =
+        `Today: ${data.percentage}% completed (${data.completed}/${data.total})`;
+}
+
+async function addTask() {
+    const input = document.getElementById("taskInput");
+    const title = input.value.trim();
+
+    if (!title) {
+        alert("Task cannot be empty!");
+        return;
+    }
+
+    await fetch(`${API}/tasks?title=${encodeURIComponent(title)}`, {
+        method: "POST"
+    });
+
+    input.value = "";
+    fetchTasks();
+}
+
+async function completeTask(id) {
+    await fetch(`${API}/tasks/${id}`, { method: "PUT" });
+    fetchTasks();
+}
+
+async function deleteTask(id) {
+    await fetch(`${API}/tasks/${id}`, { method: "DELETE" });
+    fetchTasks();
+}
+
+fetchTasks();
+</script>
+
+</body>
+</html>
